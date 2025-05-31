@@ -8,8 +8,8 @@ class API:
     def __init__(self, network: Network):
         self.logger = logging.getLogger(__name__)
         self.network = network
-        self.app = FastAPI()  # Create FastAPI instance first
-        self._setup_routes()  # Then setup routes
+        self.app = FastAPI()
+        self._setup_routes()
 
     def _setup_routes(self):
         self.logger.info("Setting up API routes...")
