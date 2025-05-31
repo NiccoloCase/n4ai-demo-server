@@ -7,7 +7,6 @@ from manual_processor import ManualProcessor
 NETWORK_DEVICES_SRC = './network_devices.json'
 NETWORK_TOPOLOGY_SRC = './network_topology.json'
 
-
 class Network:
     def __init__(self, devices_src: str = NETWORK_DEVICES_SRC, topology_src: str = NETWORK_TOPOLOGY_SRC):
         self.devices_src = devices_src
@@ -21,7 +20,6 @@ class Network:
 
         # Initialize the manual processor and load manuals
         self.manual_processor = ManualProcessor(self.devices)
-
 
 
     def _load_devices(self) -> List[Dict]:
@@ -41,6 +39,20 @@ class Network:
         except Exception as e:
             self.logger.error(f"Failed to load topology from {self.topology_src}: {e}")
             return {}
+
+
+    def get_devices(self) -> List[Dict]:
+        """Get the list of network devices."""
+        self.logger.debug("Fetching network devices")
+
+        # Populate manuals for each device
+        for device in self.devices:
+            device['manual_text'] = self.manual_processor.get_manual(device)
+
+
+        return self.devices
+
+
 
 
 

@@ -20,10 +20,8 @@ def main():
 
 
 
-    app = API(
-        extracted_text_dir="OUTPUT_DIR",
-        results_file_pattern="extraction_results"
-    )
+    app = API(network)
+
     app.start_server(
         host="localhost",
         port=8000,

@@ -11,7 +11,7 @@ from text_postprocessor import TextPostProcessor
 
 DOWNLOAD_DIR = './generated/downloads'
 EXTRACTED_DIR = './generated/extracted_text'
-PROCESSED_DIR = './generated/processed_text'
+OUTPUT_DIR = './generated/processed_text'
 
 class ManualProcessor:
     def __init__(self, devices: List[Dict]):
@@ -20,7 +20,7 @@ class ManualProcessor:
         # Create the directories if they do not exist
         Path(DOWNLOAD_DIR).mkdir(parents=True, exist_ok=True)
         Path(EXTRACTED_DIR).mkdir(parents=True, exist_ok=True)
-        Path(PROCESSED_DIR).mkdir(parents=True, exist_ok=True)
+        Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -55,6 +55,22 @@ class ManualProcessor:
             raise RuntimeError("Processing of extracted manuals failed")
 
 
+    def get_manual(self, device) -> Optional[str]:
+        """Get the processed manual data for a device."""
+        manual_name = self.get_manual_safe_name(device)
+        manual_path = Path(OUTPUT_DIR) / f"{manual_name}.txt"
+
+        # Get the content of the manual if it exists
+        if manual_path.exists():
+            try:
+                with open(manual_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception as e:
+                self.logger.error(f"Failed to read manual {manual_name}: {e}")
+                return None
+        else:
+            self.logger.warning(f"Manual file not found: {manual_path}")
+            return None
 
     def sanitize_filename(self, filename: str) -> str:
         """Clean filename for safe filesystem storage."""
@@ -62,6 +78,9 @@ class ManualProcessor:
         for char in invalid_chars:
             filename = filename.replace(char, '_')
         return filename[:200]  # Limit length
+
+
+
 
     def download_pdf(self, url: str, filename: str) -> Optional[str]:
         """Download PDF from URL with multiple retry strategies."""
@@ -152,6 +171,17 @@ class ManualProcessor:
 
         return file_path.exists() and file_path.stat().st_size > 0
 
+
+    def get_manual_safe_name(self, manual_data: Dict) -> str:
+        """Generate a safe filename for the manual."""
+        name = manual_data.get('name', 'Unknown')
+        maker = manual_data.get('maker', 'Unknown')
+
+        # Sanitize and create a safe filename
+        safe_name = f"{self.sanitize_filename(maker)}_{self.sanitize_filename(name)}"
+        return safe_name
+
+
     def process_manual(self, manual_data: Dict) -> Dict:
         """Process a single manual entry."""
         name = manual_data.get('name', 'Unknown')
@@ -182,11 +212,11 @@ class ManualProcessor:
         if not original_filename.endswith('.pdf'):
             original_filename += '.pdf'
 
-        safe_name = self.sanitize_filename(f"{maker}_{name}")
-        filename = f"{safe_name}_{original_filename}"
+
+        safe_name = self.get_manual_safe_name(manual_data)
 
         # Download PDF
-        pdf_path = self.download_pdf(url, filename)
+        pdf_path = self.download_pdf(url, safe_name)
         if not pdf_path:
             result['status'] = 'error'
             result['error'] = 'Failed to download PDF'
@@ -197,15 +227,10 @@ class ManualProcessor:
             text = self.pdf_extractor.extract_text(pdf_path)
             if text:
                 # Save extracted text
-                text_filename = f"{safe_name}_extracted.txt"
+                text_filename = f"{safe_name}.txt"
                 text_path = Path(EXTRACTED_DIR) / text_filename
 
                 with open(text_path, 'w', encoding='utf-8') as f:
-                    f.write(f"Manual: {name}\n")
-                    f.write(f"Manufacturer: {maker}\n")
-                    f.write(f"Category: {manual_data.get('category', '')}\n")
-                    f.write(f"Source: {url}\n")
-                    f.write("=" * 80 + "\n\n")
                     f.write(text)
 
                 result['status'] = 'success'
@@ -332,13 +357,18 @@ class ManualProcessor:
             self.logger.warning(f"No extracted data found in '{EXTRACTED_DIR}' directory. Skipping processing.")
             return True
 
+        # Check if the data was already processed
+        if self._check_data_exists(OUTPUT_DIR):
+            self.logger.info(f"Processed data found in '{OUTPUT_DIR}' directory. Skipping processing.")
+            return True
+
         try:
 
             extracted_files = list(Path(EXTRACTED_DIR).glob("*.txt"))
             self.logger.info(f"Found {len(extracted_files)} extracted text files in '{EXTRACTED_DIR}' directory.")
 
             text_post_processor = TextPostProcessor()
-            text_post_processor.process_multiple_files(extracted_files, PROCESSED_DIR)
+            text_post_processor.process_multiple_files(extracted_files, OUTPUT_DIR)
 
             return True
 
