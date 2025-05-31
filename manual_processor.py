@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 import time
 import urllib3
 from pdf_extractor import PDFExtractor
+from text_postprocessor import TextPostProcessor
 
 DOWNLOAD_DIR = './generated/downloads'
 EXTRACTED_DIR = './generated/extracted_text'
@@ -14,14 +15,12 @@ PROCESSED_DIR = './generated/processed_text'
 
 class ManualProcessor:
     def __init__(self, devices: List[Dict]):
-        self.download_dir = Path(DOWNLOAD_DIR)
-        self.output_dir = Path(EXTRACTED_DIR)
         self.pdf_extractor = PDFExtractor()
 
         # Create the directories if they do not exist
         Path(DOWNLOAD_DIR).mkdir(parents=True, exist_ok=True)
         Path(EXTRACTED_DIR).mkdir(parents=True, exist_ok=True)
-
+        Path(PROCESSED_DIR).mkdir(parents=True, exist_ok=True)
 
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -50,6 +49,13 @@ class ManualProcessor:
             self.logger.error("Failed to extract manuals data. Exiting.")
             raise RuntimeError("Manuals extraction failed")
 
+        # Post-processing of the extracted text
+        if not self._process_extracted_manuals():
+            self.logger.error("Failed to process extracted manuals. Exiting.")
+            raise RuntimeError("Processing of extracted manuals failed")
+
+
+
     def sanitize_filename(self, filename: str) -> str:
         """Clean filename for safe filesystem storage."""
         invalid_chars = '<>:"/\\|?*'
@@ -59,7 +65,7 @@ class ManualProcessor:
 
     def download_pdf(self, url: str, filename: str) -> Optional[str]:
         """Download PDF from URL with multiple retry strategies."""
-        file_path = self.download_dir / filename
+        file_path = Path(DOWNLOAD_DIR) / filename
 
         # Skip if already downloaded
         if file_path.exists():
@@ -192,7 +198,7 @@ class ManualProcessor:
             if text:
                 # Save extracted text
                 text_filename = f"{safe_name}_extracted.txt"
-                text_path = self.output_dir / text_filename
+                text_path = Path(EXTRACTED_DIR) / text_filename
 
                 with open(text_path, 'w', encoding='utf-8') as f:
                     f.write(f"Manual: {name}\n")
@@ -236,7 +242,7 @@ class ManualProcessor:
 
     def save_results(self, results: List[Dict], filename: str):
         """Save processing results to JSON file."""
-        results_path = self.output_dir / filename
+        results_path = Path(EXTRACTED_DIR) / filename
         with open(results_path, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False, default=str)
 
@@ -313,3 +319,29 @@ class ManualProcessor:
             self.logger.error(f"Processing failed: {e}")
             return False
 
+
+    def _process_extracted_manuals(self):
+        """
+        Process the extracted manuals text files.
+        This method can be extended to perform additional processing on the extracted text.
+        """
+        self.logger.info("Processing extracted manuals...")
+
+        # check if extracted data exists
+        if not self._check_data_exists(EXTRACTED_DIR):
+            self.logger.warning(f"No extracted data found in '{EXTRACTED_DIR}' directory. Skipping processing.")
+            return True
+
+        try:
+
+            extracted_files = list(Path(EXTRACTED_DIR).glob("*.txt"))
+            self.logger.info(f"Found {len(extracted_files)} extracted text files in '{EXTRACTED_DIR}' directory.")
+
+            text_post_processor = TextPostProcessor()
+            text_post_processor.process_multiple_files(extracted_files, PROCESSED_DIR)
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error during processing of extracted manuals: {e}")
+            return False
