@@ -1,0 +1,44 @@
+[
+  {
+    "_id": "6837064848c80fea44a5f4c4",
+    "name": "Napatech SmartNIC / IPU",
+    "maker": "Napatech",
+    "category": "SmartNIC",
+    "manual": "https://marketing.napatech.com/acton/attachment/14951/f-65646e0f-e14d-4b2a-80e2-3ca9c10d3c9c/1/-/-/-/-/Napatech_Data_Sheet_F2070X_IPU.pdf"
+  },
+  {
+    "_id": "6837064848c80fea44a5f4c5",
+    "name": "Qualcomm Snapdragon X75",
+    "maker": "Qualcomm",
+    "category": "Modem-RF System",
+    "manual": "https://docs.qualcomm.com/bundle/publicresource/87-27161-1_REV_C_Snapdragon_X75_5G_Modem-RF_System_Product_Brief.pdf"
+  },
+  {
+    "_id": "6837064848c80fea44a5f4c6",
+    "name": "Intel ACC100",
+    "maker": "Intel",
+    "category": "vRAN Accelerator",
+    "manual": "https://cdrdv2-public.intel.com/642103/Intel%20vRAN%20Accelerator%20ACC100%20Adapter.pdf"
+  },
+  {
+    "_id": "6837064848c80fea44a5f4c7",
+    "name": "Marvell OCTEON 10 DPU",
+    "maker": "Marvell",
+    "category": "Edge SoC",
+    "manual": "https://www.marvell.com/content/dam/marvell/en/public-collateral/embedded-processors/marvell-octeon-10-dpu-platform-product-brief.pdf"
+  },
+  {
+    "_id": "6837064848c80fea44a5f4c8",
+    "name": "NVIDIA BlueField-3 DPU",
+    "maker": "NVIDIA",
+    "category": "DPU",
+    "manual": "https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/documents/datasheet-nvidia-bluefield-3-dpu.pdf"
+  },
+  {
+    "_id": "6837064848c80fea44a5f4c9",
+    "name": "NVIDIA Jetson Orin NX",
+    "maker": "NVIDIA",
+    "category": "Edge AI SoM",
+    "manual": "https://developer.nvidia.com/downloads/jetson-orin-nx-series-data-sheet"
+  }
+]
