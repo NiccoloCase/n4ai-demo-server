@@ -2,6 +2,7 @@
   "topology": {
     "nodes": [
       {
+        "start": true,
         "id": "1",
         "device_id": "6837064848c80fea44a5f4c5"
       },
@@ -11,9 +12,23 @@
       },
       {
         "id": "3",
-        "device_id": "6837064848c80fea44a5f4c8"
+        "device_id": "6837064848c80fea44a5f4c8",
+        "end": true
       }
     ],
-    "connections": []
+    "connections": [
+        {
+            "source": "1",
+            "target": "2"
+        },
+        {
+            "source": "2",
+            "target": "3"
+        },
+        {
+            "source": "1",
+            "target": "3"
+        }
+    ]
   }
 }

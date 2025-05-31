@@ -1,8 +1,18 @@
 import logging
+from typing import List
+
 import uvicorn
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 from network import Network
+from router import Router
+
+
+
+class DeviceConstraints(BaseModel):
+    device_ids: List[str]
+
 
 class API:
     def __init__(self, network: Network):
@@ -10,6 +20,7 @@ class API:
         self.network = network
         self.app = FastAPI()
         self._setup_routes()
+        self.router = Router()
 
     def _setup_routes(self):
         self.logger.info("Setting up API routes...")
@@ -26,6 +37,19 @@ class API:
         @self.app.get("/devices")
         def get_network_devices():
             return self.network.get_devices()
+
+        @self.app.get("/network_topology")
+        def get_network():
+            return self.network.topology
+
+        @self.app.post("/route")
+        def get_network(constraint_devices: DeviceConstraints = None):
+            paths = self.router.route_request(constraint_devices.device_ids if constraint_devices else [], network=self.network)
+            return {
+                "paths": paths,
+                "constraints": constraint_devices,
+                "network_topology": self.network.topology
+            }
 
         self.logger.info("API routes setup completed")
 
