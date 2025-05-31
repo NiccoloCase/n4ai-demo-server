@@ -1,7 +1,6 @@
 import json
 import logging
 import requests
-import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
@@ -9,21 +8,22 @@ import time
 import urllib3
 from pdf_extractor import PDFExtractor
 
+DOWNLOAD_DIR = './generated/downloads'
+EXTRACTED_DIR = './generated/extracted_text'
+PROCESSED_DIR = './generated/processed_text'
 
 class ManualProcessor:
-    """Main class for processing hardware manuals."""
-
-    def __init__(self, download_dir: str, output_dir: str):
-        self.download_dir = Path(download_dir)
-        self.output_dir = Path(output_dir)
+    def __init__(self, devices: List[Dict]):
+        self.download_dir = Path(DOWNLOAD_DIR)
+        self.output_dir = Path(EXTRACTED_DIR)
         self.pdf_extractor = PDFExtractor()
 
-        # Create directories
-        self.download_dir.mkdir(exist_ok=True)
-        self.output_dir.mkdir(exist_ok=True)
+        # Create the directories if they do not exist
+        Path(DOWNLOAD_DIR).mkdir(parents=True, exist_ok=True)
+        Path(EXTRACTED_DIR).mkdir(parents=True, exist_ok=True)
+
 
         # Setup logging
-        self.setup_logging()
         self.logger = logging.getLogger(__name__)
 
         # Session for HTTP requests
@@ -36,21 +36,19 @@ class ManualProcessor:
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1'
         })
+
         # Disable SSL verification
         self.session.verify = False
         # Disable SSL warnings
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    def setup_logging(self):
-        """Configure logging."""
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler('pdf_extractor.log'),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
+        # Devices data
+        self.devices = devices
+
+        # Download and extract manuals data if it does not already exist
+        if not self._extract_manuals_data():
+            self.logger.error("Failed to extract manuals data. Exiting.")
+            raise RuntimeError("Manuals extraction failed")
 
     def sanitize_filename(self, filename: str) -> str:
         """Clean filename for safe filesystem storage."""
@@ -262,3 +260,56 @@ class ManualProcessor:
             for result in results:
                 if result['status'] == 'error':
                     print(f"  - {result['name']}: {result['error']}")
+
+
+
+    def _check_data_exists(self, data_dir: str) -> bool:
+        """
+        Check if extracted manuals data already exists in the output directory.
+        """
+        output_path = Path(data_dir)
+        if not output_path.exists(): return False
+
+        # Check if there are any .txt files in the output directory
+        txt_files = list(output_path.glob("*.txt"))
+        return len(txt_files) > 0
+
+
+    def _extract_manuals_data(self) -> bool:
+
+        self.logger.info("Checking if extracted data exists...")
+
+        # Check if extracted data already exists
+        if self._check_data_exists(EXTRACTED_DIR):
+            self.logger.info(f"Extracted data found in '{EXTRACTED_DIR}' directory")
+            return True
+
+        self.logger.info(f"No extracted data found in '{EXTRACTED_DIR}' directory. Starting download and extraction process...")
+
+        # Initialize processor
+        self.logger.info(f"Will process {len(self.devices)} manuals")
+
+        try:
+            self.logger.info("Starting PDF download and text extraction...")
+            results = self.process_all_manuals(self.devices)
+
+            self.print_summary(results)
+
+            successful_results = [r for r in results if r['status'] == 'success']
+            if successful_results:
+                total_chars = sum(len(r.get('text', '')) for r in successful_results)
+                avg_chars = total_chars // len(successful_results) if successful_results else 0
+                self.logger.info(f"Text extraction statistics:")
+                self.logger.info(f"  Total characters extracted: {total_chars:,}")
+                self.logger.info(f"  Average characters per manual: {avg_chars:,}")
+
+            self.logger.info("PDF extraction completed successfully")
+            return True
+
+        except KeyboardInterrupt:
+            self.logger.info("Processing interrupted by user")
+            return False
+        except Exception as e:
+            self.logger.error(f"Processing failed: {e}")
+            return False
+
